@@ -39,7 +39,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;pointer-events:none;z
 .lhint{font-size:10px;color:var(--text3);text-align:center;margin-top:14px;}
 /* APP */
 .app{display:flex;min-height:100vh;position:relative;z-index:1;}
-.sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;}
 .slogo{padding:22px 20px 16px;border-bottom:1px solid var(--border);}
 .sltext{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--teal);letter-spacing:-.02em;}
 .slver{font-size:9px;color:var(--text3);letter-spacing:.2em;margin-top:1px;}
@@ -58,7 +57,8 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;pointer-events:none;z
 .sur{font-size:10px;color:var(--text3);}
 .slo{font-size:10px;color:var(--text3);cursor:pointer;margin-top:4px;}
 .slo:hover{color:var(--red);}
-.main{margin-left:var(--sw);flex:1;min-height:100vh;padding:36px 32px 80px;}
+.main{margin-left:var(--sw);flex:1;min-height:100vh;}
+.main-inner{padding:36px 32px 80px;}
 .ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em;color:var(--text);margin-bottom:4px;}
 .psub{font-size:11px;color:var(--text3);margin-bottom:28px;line-height:1.6;}
 /* PANELS */
@@ -150,19 +150,44 @@ textarea.inp{resize:vertical;min-height:90px;line-height:1.5;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* OVERLAY */
+.overlay{display:none;position:fixed;inset:0;background:#00000077;z-index:98;}
+.overlay.show{display:block;}
+
+/* SIDEBAR always visible on desktop, slide-in on mobile */
+.sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .25s;}
+
+/* TOP BAR (mobile only) */
+.topbar{display:none;align-items:center;justify-content:space-between;padding:14px 16px 0;margin-bottom:12px;}
+.topbar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--teal);}
+.hamburger{background:transparent;border:1px solid var(--border2);border-radius:6px;padding:7px 11px;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;transition:all .15s;}
+.hamburger:hover{border-color:var(--teal);color:var(--teal);}
+
+/* BOTTOM TAB BAR (mobile only) */
+.bottom-tabs{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:97;padding-bottom:env(safe-area-inset-bottom);}
+.tabs-inner{display:flex;align-items:stretch;}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px 6px;cursor:pointer;transition:all .15s;border:none;background:transparent;color:var(--text3);gap:3px;min-width:0;}
+.tab-item.active{color:var(--teal);}
+.tab-item:hover{color:var(--text2);}
+.tab-icon{font-size:18px;line-height:1;}
+.tab-label{font-size:8px;letter-spacing:.06em;text-transform:uppercase;font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.tab-dot{width:4px;height:4px;border-radius:50%;background:var(--teal);margin-top:1px;opacity:0;}
+.tab-item.active .tab-dot{opacity:1;}
+
 @media(max-width:768px){
-  .sidebar{transform:translateX(-100%);transition:transform .25s;}
-  .sidebar.open{transform:translateX(0);}
-  .main{margin-left:0;padding:16px 14px 60px;}
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0) !important;}
+  .main{margin-left:0 !important;padding:0 0 80px 0;}
+  .main-inner{padding:14px 14px 0;}
   .g2,.g3{grid-template-columns:1fr;}
   .row{flex-wrap:wrap;}
-  .mob-bar{display:flex;}
+  .topbar{display:flex;}
+  .bottom-tabs{display:block;}
 }
-.mob-bar{display:none;align-items:center;gap:10px;margin-bottom:16px;}
-.hamburger{background:transparent;border:1px solid var(--border2);border-radius:4px;padding:6px 10px;cursor:pointer;color:var(--text2);font-size:16px;line-height:1;transition:all .15s;}
-.hamburger:hover{border-color:var(--teal);color:var(--teal);}
-.overlay{display:none;position:fixed;inset:0;background:#00000077;z-index:99;}
-.overlay.show{display:block;}
+@media(min-width:769px){
+  .sidebar{transform:none !important;}
+}
 </style>
 </head>
 <body>
@@ -757,18 +782,20 @@ function SettingsPage({currentUser}){
 
 // APP SHELL
 const NAV=[
-  {id:"search",icon:"🔍",label:"Search",sec:"Tools"},
-  {id:"trending",icon:"📈",label:"Trending",sec:"Tools"},
-  {id:"media",icon:"🎬",label:"Media",sec:"Tools"},
-  {id:"community",icon:"👥",label:"Community",sec:"Manage"},
-  {id:"handles",icon:"@",label:"Handles",sec:"Manage"},
-  {id:"caption",icon:"✍",label:"Caption AI",sec:"Create"},
-  {id:"settings",icon:"⚙",label:"Settings",sec:"System"},
+  {id:"search",  icon:"🔍", label:"Search",    sec:"Tools"},
+  {id:"trending",icon:"📈", label:"Trending",  sec:"Tools"},
+  {id:"media",   icon:"🎬", label:"Media",     sec:"Tools"},
+  {id:"community",icon:"👥",label:"Community", sec:"Manage"},
+  {id:"handles", icon:"@",  label:"Handles",   sec:"Manage"},
+  {id:"caption", icon:"✍", label:"Caption",   sec:"Create"},
+  {id:"settings",icon:"⚙", label:"Settings",  sec:"System"},
 ];
+// Bottom tabs show the 5 most-used — the rest are in sidebar
+const TAB_ITEMS=["search","trending","media","caption","settings"];
 const PAGES={search:SearchPage,trending:TrendingPage,media:MediaPage,community:CommunityPage,handles:HandlesPage,caption:CaptionPage,settings:SettingsPage};
 
 function App(){
-  const[user,setUser]=useState(()=>JSON.parse(sessionStorage.getItem("tw_session")||"null"));
+  const[user,setUser]=useState(()=>{try{return JSON.parse(sessionStorage.getItem("tw_session")||"null");}catch{return null;}});
   const[page,setPage]=useState("search");
   const[sideOpen,setSideOpen]=useState(false);
   const login=u=>{sessionStorage.setItem("tw_session",JSON.stringify(u));setUser(u);};
@@ -777,11 +804,15 @@ function App(){
   const secs=[...new Set(NAV.map(n=>n.sec))];
   const PC=PAGES[page]||SearchPage;
   const conn=!!getSB();
-  const nav=(id)=>{setPage(id);setSideOpen(false);};
+  const nav=id=>{setPage(id);setSideOpen(false);};
+
   return(
     <div className="app">
+      {/* Overlay behind sidebar on mobile */}
       {sideOpen&&<div className="overlay show" onClick={()=>setSideOpen(false)}/>}
-      <div className={`sidebar ${sideOpen?"open":""}`}>
+
+      {/* SIDEBAR */}
+      <div className={`sidebar${sideOpen?" open":""}`}>
         <div className="slogo">
           <div className="sltext">TWISTER</div>
           <div className="slver">v 1.3</div>
@@ -792,7 +823,7 @@ function App(){
             <div key={sec}>
               <div className="nsec">{sec}</div>
               {NAV.filter(n=>n.sec===sec).map(n=>(
-                <div key={n.id} className={`ni ${page===n.id?"active":""}`} onClick={()=>nav(n.id)}>
+                <div key={n.id} className={`ni${page===n.id?" active":""}`} onClick={()=>nav(n.id)}>
                   <span className="ic">{n.icon}</span><span>{n.label}</span>
                 </div>
               ))}
@@ -805,12 +836,33 @@ function App(){
           <div className="slo" onClick={logout}>Sign out</div>
         </div>
       </div>
+
+      {/* MAIN CONTENT */}
       <div className="main fi">
-        <div className="mob-bar">
+        {/* Mobile top bar */}
+        <div className="topbar">
+          <span className="topbar-logo">TWISTER</span>
           <button className="hamburger" onClick={()=>setSideOpen(v=>!v)}>☰</button>
-          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:16,color:"var(--teal)"}}>TWISTER</span>
         </div>
-        <PC userId={user.user} currentUser={user}/>
+        <div className="main-inner">
+          <PC userId={user.user} currentUser={user}/>
+        </div>
+      </div>
+
+      {/* BOTTOM TAB BAR (mobile) */}
+      <div className="bottom-tabs">
+        <div className="tabs-inner">
+          {TAB_ITEMS.map(id=>{
+            const n=NAV.find(x=>x.id===id);
+            return(
+              <button key={id} className={`tab-item${page===id?" active":""}`} onClick={()=>nav(id)}>
+                <span className="tab-icon">{n.icon}</span>
+                <span className="tab-label">{n.label}</span>
+                <span className="tab-dot"/>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
