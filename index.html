@@ -150,7 +150,19 @@ textarea.inp{resize:vertical;min-height:90px;line-height:1.5;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 @keyframes spin{to{transform:rotate(360deg);}}
-@media(max-width:768px){.sidebar{display:none;}.main{margin-left:0;padding:20px 16px 60px;}.g2,.g3{grid-template-columns:1fr;}.row{flex-wrap:wrap;}}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .25s;}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;padding:16px 14px 60px;}
+  .g2,.g3{grid-template-columns:1fr;}
+  .row{flex-wrap:wrap;}
+  .mob-bar{display:flex;}
+}
+.mob-bar{display:none;align-items:center;gap:10px;margin-bottom:16px;}
+.hamburger{background:transparent;border:1px solid var(--border2);border-radius:4px;padding:6px 10px;cursor:pointer;color:var(--text2);font-size:16px;line-height:1;transition:all .15s;}
+.hamburger:hover{border-color:var(--teal);color:var(--teal);}
+.overlay{display:none;position:fixed;inset:0;background:#00000077;z-index:99;}
+.overlay.show{display:block;}
 </style>
 </head>
 <body>
@@ -161,8 +173,11 @@ const CY=new Date().getFullYear();
 const MF=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const pad=n=>String(n).padStart(2,"0");
 
+const SB_URL="https://rwbdqopcctujhqpeeecb.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3YmRxb3BjY3R1amhxcGVlZWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjM4NTUsImV4cCI6MjA5MDAzOTg1NX0.AcxAjiVr-EUEkc8C76uPhpdiGNt1a0jZHr8aa_M-l5g";
 function getSB(){
-  const u=localStorage.getItem("tw_sb_url"),k=localStorage.getItem("tw_sb_key");
+  const u=localStorage.getItem("tw_sb_url")||SB_URL;
+  const k=localStorage.getItem("tw_sb_key")||SB_KEY;
   if(!u||!k)return null;
   try{return window.supabase.createClient(u,k);}catch{return null;}
 }
@@ -195,17 +210,22 @@ async function dbUpsert(table,row){
   await sb.from(table).upsert(row,{onConflict:"user_id"});
 }
 
-function buildURL({accounts,keywords,minRT,minFav,year,month,day}){
+// Build raw query string (copyable text)
+function buildQuery({accounts,keywords,minRT,minFav,year,startMonth,startDay,rangeDays}){
   let p=[];
   (accounts||[]).forEach(a=>p.push(`from:${a.replace("@","")}`));
   (keywords||[]).forEach(k=>p.push(k));
   if(minRT>0)p.push(`min_retweets:${minRT}`);
   if(minFav>0)p.push(`min_faves:${minFav}`);
-  const since=`${year}-${pad(month)}-${pad(day)}`;
-  const nd=new Date(year,month-1,parseInt(day)+1);
-  const until=`${nd.getFullYear()}-${pad(nd.getMonth()+1)}-${pad(nd.getDate())}`;
+  const since=`${year}-${pad(startMonth)}-${pad(startDay)}`;
+  // until = start date + rangeDays in the same year
+  const untilDt=new Date(year,startMonth-1,parseInt(startDay)+parseInt(rangeDays));
+  const until=`${untilDt.getFullYear()}-${pad(untilDt.getMonth()+1)}-${pad(untilDt.getDate())}`;
   p.push(`since:${since}`);p.push(`until:${until}`);
-  return`https://x.com/search?q=${encodeURIComponent(p.join(" "))}&f=live`;
+  return p.join(" ");
+}
+function buildURL(opts){
+  return`https://x.com/search?q=${encodeURIComponent(buildQuery(opts))}&f=live`;
 }
 function useCopy(){
   const[c,setC]=useState(null);
@@ -282,17 +302,19 @@ function SearchPage({userId}){
   };
 
   const generate=()=>{
-    const rows=[];
     const years=Array.from({length:yb},(_,i)=>CY-1-i).filter(y=>y>=2006);
-    for(let d=0;d<rd;d++){
-      const dt=new Date(CY,sm-1,sd+d);const m=dt.getMonth()+1,day=dt.getDate();
-      years.forEach(year=>rows.push({year,month:m,day,url:buildURL({accounts,keywords,minRT,minFav,year,month:m,day})}));
-    }
+    const rows=years.map(year=>{
+      const opts={accounts,keywords,minRT,minFav,year,startMonth:sm,startDay:sd,rangeDays:rd};
+      return{year,query:buildQuery(opts),url:buildURL(opts)};
+    });
     setResults(rows);
   };
 
   const dim=new Date(CY,sm,0).getDate();
-  const grouped=results.reduce((a,r)=>{const k=`${MF[r.month-1]} ${r.day}`;if(!a[k])a[k]=[];a[k].push(r);return a;},{});
+  // Preview the date range
+  const sinceStr=`${CY}-${pad(sm)}-${pad(sd)}`;
+  const untilDt=new Date(CY,sm-1,parseInt(sd)+parseInt(rd));
+  const untilStr=`${untilDt.getFullYear()}-${pad(untilDt.getMonth()+1)}-${pad(untilDt.getDate())}`;
   if(loading)return<div className="loading"><div className="spin"/>Loading saved settings…</div>;
 
   return(
@@ -317,10 +339,10 @@ function SearchPage({userId}){
           <div className="field"><label className="lbl">Start Day</label>
             <select className="inp sm" value={sd} onChange={e=>setSd(Number(e.target.value))}>{Array.from({length:dim},(_,i)=>i+1).map(d=><option key={d} value={d}>{d}</option>)}</select></div>
           <div className="field"><label className="lbl">Days in Range</label>
-            <input className="inp sm" type="number" min="1" max="30" value={rd} onChange={e=>setRd(Math.max(1,Number(e.target.value)))}/></div>
+            <input className="inp sm" type="number" min="1" max="90" value={rd} onChange={e=>setRd(Math.max(1,Number(e.target.value)))}/></div>
         </div>
-        <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>
-          {Array.from({length:rd},(_,i)=>{const dt=new Date(CY,sm-1,sd+i);return`${MF[dt.getMonth()].slice(0,3)} ${dt.getDate()}`;}).join(" → ")}
+        <div style={{fontSize:11,color:"var(--teal)",marginTop:6,fontFamily:"monospace",background:"var(--surface2)",padding:"6px 10px",borderRadius:4,letterSpacing:".02em"}}>
+          since:{sinceStr} until:{untilStr}
         </div>
       </div>
       <div className="panel">
@@ -337,25 +359,25 @@ function SearchPage({userId}){
         <div style={{marginTop:24}} className="fi">
           <div className="cbar">
             <button className={`btn bghost bsm ${copied==="au"?"active":""}`} onClick={()=>copy(results.map(r=>r.url).join("\n"),"au")}>{copied==="au"?"✓ Copied":"Copy All URLs"}</button>
-            <button className={`btn bghost bsm ${copied==="af"?"active":""}`} onClick={()=>copy(results.map(r=>`${r.year} ${MF[r.month-1]} ${r.day}: ${r.url}`).join("\n"),"af")}>{copied==="af"?"✓ Copied":"Copy Year: URL"}</button>
+            <button className={`btn bghost bsm ${copied==="aq"?"active":""}`} onClick={()=>copy(results.map(r=>`${r.year}: ${r.query}`).join("\n"),"aq")}>{copied==="aq"?"✓ Copied":"Copy All Queries"}</button>
             <span style={{fontSize:10,color:"var(--text3)",alignSelf:"center"}}>{results.length} links</span>
           </div>
-          {Object.entries(grouped).map(([lbl,rows])=>(
-            <div key={lbl} style={{marginBottom:20}}>
-              <div style={{fontSize:10,color:"var(--teal)",letterSpacing:".15em",textTransform:"uppercase",marginBottom:6,padding:"4px 0",borderBottom:"1px solid var(--border)"}}>{lbl}</div>
-              {rows.map((r,i)=>(
-                <div key={i} className="rc">
-                  <div className="ry">{r.year}</div>
-                  <div className="ru"><a href={r.url} target="_blank" rel="noopener noreferrer">{r.url.slice(0,72)}…</a>
-                    <div className="rag">{CY-r.year===1?"1 year ago":`${CY-r.year} years ago`}</div></div>
-                  <div className="ra">
-                    <button className={`ib ${copied===`r${r.year}${r.month}${r.day}`?"active":""}`} onClick={()=>copy(r.url,`r${r.year}${r.month}${r.day}`)}>⧉</button>
-                    <a href={r.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"var(--text3)"}}>↗</a>
-                  </div>
+          <div style={{display:"flex",flexDirection:"column",gap:3}}>
+            {results.map((r,i)=>(
+              <div key={r.year} className="rc" style={{flexWrap:"wrap",padding:"10px 0 10px 0",alignItems:"flex-start"}}>
+                <div className="ry" style={{alignSelf:"center"}}>{r.year}</div>
+                <div className="ru" style={{minWidth:0,flex:1,padding:"0 10px"}}>
+                  <div style={{fontSize:10,color:"var(--text3)",marginBottom:3}}>{CY-r.year===1?"1 year ago":`${CY-r.year} years ago`}</div>
+                  <div style={{fontSize:10,color:"#3a7a5a",wordBreak:"break-all",lineHeight:1.5}}>{r.query}</div>
                 </div>
-              ))}
-            </div>
-          ))}
+                <div className="ra" style={{flexShrink:0,padding:"0 10px",gap:4}}>
+                  <button className={`btn bghost bxs ${copied===`q${r.year}`?"active":""}`} onClick={()=>copy(r.query,`q${r.year}`)} title="Copy query text">{copied===`q${r.year}`?"✓":"Copy Text"}</button>
+                  <button className={`btn bghost bxs ${copied===`u${r.year}`?"active":""}`} onClick={()=>copy(r.url,`u${r.year}`)} title="Copy URL">{copied===`u${r.year}`?"✓":"Copy URL"}</button>
+                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="btn bghost bxs">↗</a>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -656,8 +678,8 @@ function CaptionPage({userId}){
 
 // SETTINGS
 function SettingsPage({currentUser}){
-  const[sbUrl,setSbUrl]=useState(()=>localStorage.getItem("tw_sb_url")||"");
-  const[sbKey,setSbKey]=useState(()=>localStorage.getItem("tw_sb_key")||"");
+  const[sbUrl,setSbUrl]=useState(()=>localStorage.getItem("tw_sb_url")||SB_URL);
+  const[sbKey,setSbKey]=useState(()=>localStorage.getItem("tw_sb_key")||SB_KEY);
   const[ak,setAk]=useState(()=>localStorage.getItem("tw_apikey")||"");
   const[showK,setShowK]=useState(false);const[showA,setShowA]=useState(false);
   const[st,setSt]=useState(null);const[testing,setTesting]=useState(false);const[saved,setSaved]=useState(false);
@@ -748,15 +770,18 @@ const PAGES={search:SearchPage,trending:TrendingPage,media:MediaPage,community:C
 function App(){
   const[user,setUser]=useState(()=>JSON.parse(sessionStorage.getItem("tw_session")||"null"));
   const[page,setPage]=useState("search");
+  const[sideOpen,setSideOpen]=useState(false);
   const login=u=>{sessionStorage.setItem("tw_session",JSON.stringify(u));setUser(u);};
   const logout=()=>{sessionStorage.removeItem("tw_session");setUser(null);};
   if(!user)return<Login onLogin={login}/>;
   const secs=[...new Set(NAV.map(n=>n.sec))];
   const PC=PAGES[page]||SearchPage;
   const conn=!!getSB();
+  const nav=(id)=>{setPage(id);setSideOpen(false);};
   return(
     <div className="app">
-      <div className="sidebar">
+      {sideOpen&&<div className="overlay show" onClick={()=>setSideOpen(false)}/>}
+      <div className={`sidebar ${sideOpen?"open":""}`}>
         <div className="slogo">
           <div className="sltext">TWISTER</div>
           <div className="slver">v 1.3</div>
@@ -767,7 +792,7 @@ function App(){
             <div key={sec}>
               <div className="nsec">{sec}</div>
               {NAV.filter(n=>n.sec===sec).map(n=>(
-                <div key={n.id} className={`ni ${page===n.id?"active":""}`} onClick={()=>setPage(n.id)}>
+                <div key={n.id} className={`ni ${page===n.id?"active":""}`} onClick={()=>nav(n.id)}>
                   <span className="ic">{n.icon}</span><span>{n.label}</span>
                 </div>
               ))}
@@ -780,7 +805,13 @@ function App(){
           <div className="slo" onClick={logout}>Sign out</div>
         </div>
       </div>
-      <div className="main fi"><PC userId={user.user} currentUser={user}/></div>
+      <div className="main fi">
+        <div className="mob-bar">
+          <button className="hamburger" onClick={()=>setSideOpen(v=>!v)}>☰</button>
+          <span style={{fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:16,color:"var(--teal)"}}>TWISTER</span>
+        </div>
+        <PC userId={user.user} currentUser={user}/>
+      </div>
     </div>
   );
 }
