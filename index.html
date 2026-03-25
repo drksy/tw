@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TWISTER 1.3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+:root{
+  --bg:#07090c;--surface:#0d1117;--surface2:#111820;--border:#1c2535;--border2:#243044;
+  --teal:#00d4aa;--teal-dim:#00d4aa22;--teal-mid:#00d4aa55;
+  --orange:#ff6b35;--orange-dim:#ff6b3520;--red:#f85149;--gold:#e3b341;
+  --text:#e6edf3;--text2:#8b949e;--text3:#4a5568;--sw:220px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);min-height:100vh;font-family:'DM Mono',monospace;color:var(--text);overflow-x:hidden;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+a{color:var(--teal);text-decoration:none;}a:hover{text-decoration:underline;}
+input,select,textarea,button{font-family:'DM Mono',monospace;}select option{background:var(--surface2);}
+body::before{content:'';position:fixed;inset:0;opacity:.03;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:150px;}
+/* LOGIN */
+.lw{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
+.lg{position:fixed;width:500px;height:500px;background:radial-gradient(circle,#00d4aa18 0%,transparent 70%);pointer-events:none;top:50%;left:50%;transform:translate(-50%,-50%);}
+.lb{width:100%;max-width:400px;padding:48px 40px;background:var(--surface);border:1px solid var(--border);border-radius:8px;}
+.ll{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--teal);margin-bottom:4px;}
+.lv{font-size:11px;color:var(--text3);margin-bottom:32px;letter-spacing:.1em;}
+.llab{font-size:10px;letter-spacing:.2em;color:var(--text2);text-transform:uppercase;display:block;margin-bottom:6px;}
+.li{width:100%;background:#0a0e14;border:1px solid var(--border2);border-radius:4px;padding:10px 14px;font-size:13px;color:var(--text);outline:none;transition:border-color .2s;margin-bottom:14px;}
+.li:focus{border-color:var(--teal);}
+.lbtn{width:100%;background:var(--teal);color:#07090c;border:none;border-radius:4px;padding:12px;font-size:12px;letter-spacing:.15em;font-weight:500;cursor:pointer;transition:opacity .2s;}
+.lbtn:hover{opacity:.85;}
+.lerr{color:var(--red);font-size:11px;margin-top:8px;text-align:center;}
+.lhint{font-size:10px;color:var(--text3);text-align:center;margin-top:14px;}
+/* APP */
+.app{display:flex;min-height:100vh;position:relative;z-index:1;}
+.sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;}
+.slogo{padding:22px 20px 16px;border-bottom:1px solid var(--border);}
+.sltext{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--teal);letter-spacing:-.02em;}
+.slver{font-size:9px;color:var(--text3);letter-spacing:.2em;margin-top:1px;}
+.sbst{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:9px;color:var(--text3);}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.sdot.on{background:var(--teal);}
+.sdot.off{background:var(--text3);}
+.snav{flex:1;overflow-y:auto;padding:12px 0;}
+.nsec{font-size:9px;letter-spacing:.25em;color:var(--text3);padding:10px 20px 4px;text-transform:uppercase;}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;border-left:2px solid transparent;user-select:none;}
+.ni:hover{color:var(--text);background:var(--surface2);}
+.ni.active{color:var(--teal);background:var(--teal-dim);border-left-color:var(--teal);}
+.ni .ic{font-size:14px;width:18px;text-align:center;}
+.suser{padding:14px 20px;border-top:1px solid var(--border);}
+.sun{font-size:12px;color:var(--text);}
+.sur{font-size:10px;color:var(--text3);}
+.slo{font-size:10px;color:var(--text3);cursor:pointer;margin-top:4px;}
+.slo:hover{color:var(--red);}
+.main{margin-left:var(--sw);flex:1;min-height:100vh;padding:36px 32px 80px;}
+.ptitle{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em;color:var(--text);margin-bottom:4px;}
+.psub{font-size:11px;color:var(--text3);margin-bottom:28px;line-height:1.6;}
+/* PANELS */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:22px 24px;margin-bottom:20px;}
+.ptl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+/* FORMS */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.lbl{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text2);}
+.inp{background:#0a0e14;border:1px solid var(--border2);border-radius:4px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;transition:border-color .2s;width:100%;}
+.inp:focus{border-color:var(--teal);}
+.inp::placeholder{color:var(--text3);}
+.sm{padding:7px 10px;font-size:12px;}
+textarea.inp{resize:vertical;min-height:90px;line-height:1.5;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.row{display:flex;gap:10px;align-items:flex-start;}
+/* BUTTONS */
+.btn{border-radius:4px;padding:9px 18px;font-size:11px;letter-spacing:.12em;cursor:pointer;font-family:'DM Mono',monospace;transition:all .18s;white-space:nowrap;border:none;}
+.bteal{background:var(--teal);color:#07090c;font-weight:500;}
+.bteal:hover{opacity:.85;}
+.bghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.bghost:hover,.bghost.active{border-color:var(--teal);color:var(--teal);}
+.bdanger{background:transparent;color:var(--red);border:1px solid #f8514933;}
+.bdanger:hover{background:#f8514915;}
+.bsm{padding:6px 12px;font-size:10px;}
+.bxs{padding:4px 8px;font-size:9px;letter-spacing:.08em;}
+.brow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+/* TAGS */
+.tw{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:42px;background:#0a0e14;border:1px solid var(--border2);border-radius:4px;padding:6px 10px;cursor:text;transition:border-color .2s;}
+.tw:focus-within{border-color:var(--teal);}
+.tag{background:var(--teal-dim);border:1px solid var(--teal-mid);border-radius:3px;padding:3px 8px;font-size:11px;color:var(--teal);display:flex;align-items:center;gap:5px;}
+.tx{cursor:pointer;color:var(--teal);opacity:.6;font-size:13px;line-height:1;}
+.tx:hover{opacity:1;}
+.ti{background:transparent;border:none;outline:none;font-size:12px;color:var(--text);font-family:'DM Mono',monospace;flex:1;min-width:80px;padding:2px 0;}
+.ti::placeholder{color:var(--text3);}
+/* RESULTS */
+.rc{display:flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:3px;transition:border-color .15s;}
+.rc:hover{border-color:var(--border2);}
+.ry{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);min-width:58px;padding:11px 12px;border-right:1px solid var(--border);text-align:center;flex-shrink:0;}
+.ru{flex:1;padding:0 12px;overflow:hidden;}
+.ru a{font-size:10px;color:#4a8a6a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+.ru a:hover{color:var(--teal);}
+.rag{font-size:9px;color:var(--text3);margin-top:2px;}
+.ra{display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;}
+.ib{background:transparent;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:4px;transition:color .15s;}
+.ib:hover,.ib.active{color:var(--teal);}
+/* TREND */
+.trc{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:8px;}
+.tkw{font-size:14px;color:var(--text);margin-bottom:4px;}
+.tmet{font-size:10px;color:var(--text3);}
+.tbar{height:3px;background:var(--border);border-radius:2px;margin:8px 0 4px;}
+.tbf{height:100%;border-radius:2px;transition:width .5s ease;}
+.badge{display:inline-block;padding:2px 7px;border-radius:2px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;}
+.bhot{background:var(--orange-dim);color:var(--orange);border:1px solid #ff6b3533;}
+.bris{background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal-mid);}
+.bcol{background:#ffffff08;color:var(--text3);border:1px solid var(--border);}
+/* MEDIA */
+.dlc{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s;cursor:pointer;}
+.dlc:hover{border-color:var(--border2);}
+/* COMMUNITY */
+.prc{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:6px;}
+.pav{width:38px;height:38px;border-radius:50%;background:var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+/* HANDLES */
+.hr{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.hd{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+/* CAPTION */
+.bp{padding:6px 14px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border2);color:var(--text2);transition:all .15s;background:transparent;}
+.bp.active{border-color:var(--teal);color:var(--teal);background:var(--teal-dim);}
+.bp:hover:not(.active){border-color:var(--border);color:var(--text);}
+.ob{background:#0a0e14;border:1px solid var(--teal-mid);border-radius:6px;padding:18px 20px;font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;min-height:80px;}
+.da span{display:inline-block;animation:pulse 1.2s infinite;}
+.da span:nth-child(2){animation-delay:.2s;}
+.da span:nth-child(3){animation-delay:.4s;}
+/* SETTINGS */
+.sr{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.sr:last-child{border-bottom:none;}
+.sl{font-size:12px;color:var(--text);}
+.sh{font-size:10px;color:var(--text3);margin-top:2px;}
+/* MISC */
+.note{font-size:10px;color:var(--text3);line-height:1.6;padding:10px 14px;background:var(--surface2);border-left:2px solid var(--teal);border-radius:0 4px 4px 0;margin:12px 0;}
+.chip{padding:4px 10px;border-radius:3px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;}
+.cteal{background:var(--teal-dim);color:var(--teal);border:1px solid var(--teal-mid);}
+.cred{background:#f8514920;color:var(--red);border:1px solid #f8514944;}
+.empty{text-align:center;padding:40px;color:var(--text3);font-size:11px;line-height:1.8;}
+.cbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.loading{display:flex;align-items:center;gap:8px;color:var(--text3);font-size:11px;padding:20px 0;}
+.spin{width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+.fi{animation:fadeIn .3s ease both;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media(max-width:768px){.sidebar{display:none;}.main{margin-left:0;padding:20px 16px 60px;}.g2,.g3{grid-template-columns:1fr;}.row{flex-wrap:wrap;}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef}=React;
+const CY=new Date().getFullYear();
+const MF=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const pad=n=>String(n).padStart(2,"0");
+
+function getSB(){
+  const u=localStorage.getItem("tw_sb_url"),k=localStorage.getItem("tw_sb_key");
+  if(!u||!k)return null;
+  try{return window.supabase.createClient(u,k);}catch{return null;}
+}
+async function dbFetch(table,uid,fbKey,def){
+  const sb=getSB();
+  if(!sb){try{return JSON.parse(localStorage.getItem(fbKey)||"null")||def;}catch{return def;}}
+  const{data,error}=await sb.from(table).select("*").eq("user_id",uid);
+  if(error){console.error(error);return def;}
+  return data||def;
+}
+async function dbInsert(table,row,fbKey,list){
+  const sb=getSB();
+  if(!sb){const n=[...list,{...row,id:Date.now()}];localStorage.setItem(fbKey,JSON.stringify(n));return{data:{...row,id:Date.now()},local:true};}
+  const{data,error}=await sb.from(table).insert(row).select().single();
+  return{data,error};
+}
+async function dbDelete(table,id,fbKey,list){
+  const sb=getSB();
+  if(!sb){localStorage.setItem(fbKey,JSON.stringify(list.filter(r=>r.id!==id)));return;}
+  await sb.from(table).delete().eq("id",id);
+}
+async function dbUpdate(table,id,updates){
+  const sb=getSB();
+  if(!sb)return;
+  await sb.from(table).update(updates).eq("id",id);
+}
+async function dbUpsert(table,row){
+  const sb=getSB();
+  if(!sb)return;
+  await sb.from(table).upsert(row,{onConflict:"user_id"});
+}
+
+function buildURL({accounts,keywords,minRT,minFav,year,month,day}){
+  let p=[];
+  (accounts||[]).forEach(a=>p.push(`from:${a.replace("@","")}`));
+  (keywords||[]).forEach(k=>p.push(k));
+  if(minRT>0)p.push(`min_retweets:${minRT}`);
+  if(minFav>0)p.push(`min_faves:${minFav}`);
+  const since=`${year}-${pad(month)}-${pad(day)}`;
+  const nd=new Date(year,month-1,parseInt(day)+1);
+  const until=`${nd.getFullYear()}-${pad(nd.getMonth()+1)}-${pad(nd.getDate())}`;
+  p.push(`since:${since}`);p.push(`until:${until}`);
+  return`https://x.com/search?q=${encodeURIComponent(p.join(" "))}&f=live`;
+}
+function useCopy(){
+  const[c,setC]=useState(null);
+  return[c,(text,key)=>{navigator.clipboard.writeText(text);setC(key);setTimeout(()=>setC(null),2000);}];
+}
+function TagInput({value,onChange,placeholder}){
+  const[draft,setDraft]=useState("");const r=useRef();
+  const add=raw=>{const v=raw.trim();if(v&&!value.includes(v))onChange([...value,v]);setDraft("");};
+  return(
+    <div className="tw" onClick={()=>r.current?.focus()}>
+      {value.map(t=><span key={t} className="tag">{t}<span className="tx" onClick={e=>{e.stopPropagation();onChange(value.filter(x=>x!==t));}}>×</span></span>)}
+      <input ref={r} className="ti" value={draft} placeholder={value.length===0?placeholder:""}
+        onChange={e=>setDraft(e.target.value)}
+        onKeyDown={e=>{if(["Enter","Tab",","," "].includes(e.key)&&draft.trim()){e.preventDefault();add(draft);}if(e.key==="Backspace"&&!draft&&value.length)onChange(value.slice(0,-1));}}
+        onBlur={()=>draft.trim()&&add(draft)}/>
+    </div>
+  );
+}
+
+// LOGIN
+function Login({onLogin}){
+  const[u,setU]=useState("");const[p,setP]=useState("");const[err,setErr]=useState("");
+  const go=()=>{
+    const users=JSON.parse(localStorage.getItem("tw_users")||"[]");
+    if(!users.length){localStorage.setItem("tw_users",JSON.stringify([{user:u,pass:p,role:"Admin"}]));onLogin({user:u,role:"Admin"});return;}
+    const f=users.find(x=>x.user===u&&x.pass===p);
+    if(f)onLogin(f);else setErr("Invalid username or password.");
+  };
+  return(
+    <div className="lw"><div className="lg"/>
+      <div className="lb fi">
+        <div className="ll">TWISTER</div>
+        <div className="lv">v 1.3 — X/Twitter Command Center</div>
+        <label className="llab">Username</label>
+        <input className="li" value={u} onChange={e=>setU(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="username"/>
+        <label className="llab">Password</label>
+        <input className="li" type="password" value={p} onChange={e=>setP(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="••••••••"/>
+        <button className="lbtn" onClick={go}>SIGN IN →</button>
+        {err&&<div className="lerr">{err}</div>}
+        <div className="lhint">First time? Any credentials will create your account.</div>
+      </div>
+    </div>
+  );
+}
+
+// SEARCH
+function SearchPage({userId}){
+  const[accounts,setAccounts]=useState([]);
+  const[keywords,setKeywords]=useState([]);
+  const[minRT,setMinRT]=useState(0);const[minFav,setMinFav]=useState(0);
+  const[sm,setSm]=useState(new Date().getMonth()+1);const[sd,setSd]=useState(new Date().getDate());
+  const[rd,setRd]=useState(1);const[yb,setYb]=useState(12);
+  const[results,setResults]=useState([]);
+  const[loading,setLoading]=useState(true);const[saving,setSaving]=useState(false);
+  const[copied,copy]=useCopy();
+
+  useEffect(()=>{(async()=>{
+    setLoading(true);
+    const sb=getSB();
+    if(sb){const{data}=await sb.from("twister_settings").select("*").eq("user_id",userId).single();
+      if(data){setAccounts(data.accounts||[]);setKeywords(data.keywords||[]);setMinRT(data.min_rt||0);setMinFav(data.min_fav||0);}
+    }else{try{const s=JSON.parse(localStorage.getItem("tw_search")||"{}");
+      if(s.accounts)setAccounts(s.accounts);if(s.keywords)setKeywords(s.keywords);
+      if(s.min_rt!==undefined)setMinRT(s.min_rt);if(s.min_fav!==undefined)setMinFav(s.min_fav);}catch{}}
+    setLoading(false);
+  })();},[userId]);
+
+  const save=async()=>{
+    setSaving(true);
+    const row={user_id:userId,accounts,keywords,min_rt:minRT,min_fav:minFav,updated_at:new Date().toISOString()};
+    await dbUpsert("twister_settings",row);
+    localStorage.setItem("tw_search",JSON.stringify(row));
+    setSaving(false);
+  };
+
+  const generate=()=>{
+    const rows=[];
+    const years=Array.from({length:yb},(_,i)=>CY-1-i).filter(y=>y>=2006);
+    for(let d=0;d<rd;d++){
+      const dt=new Date(CY,sm-1,sd+d);const m=dt.getMonth()+1,day=dt.getDate();
+      years.forEach(year=>rows.push({year,month:m,day,url:buildURL({accounts,keywords,minRT,minFav,year,month:m,day})}));
+    }
+    setResults(rows);
+  };
+
+  const dim=new Date(CY,sm,0).getDate();
+  const grouped=results.reduce((a,r)=>{const k=`${MF[r.month-1]} ${r.day}`;if(!a[k])a[k]=[];a[k].push(r);return a;},{});
+  if(loading)return<div className="loading"><div className="spin"/>Loading saved settings…</div>;
+
+  return(
+    <div>
+      <div className="ptitle">Search Generator</div>
+      <div className="psub">Build archive searches across years and date ranges.</div>
+      <div className="panel">
+        <div className="ptl">Accounts & Keywords</div>
+        <div className="field"><label className="lbl">From Accounts</label><TagInput value={accounts} onChange={setAccounts} placeholder="@handle — press Enter after each"/></div>
+        <div className="field"><label className="lbl">Keywords / Hashtags</label><TagInput value={keywords} onChange={setKeywords} placeholder="#topic keyword — press Enter after each"/></div>
+        <div className="g2">
+          <div className="field"><label className="lbl">Min Retweets</label><input className="inp sm" type="number" min="0" value={minRT} onChange={e=>setMinRT(Number(e.target.value))}/></div>
+          <div className="field"><label className="lbl">Min Favorites</label><input className="inp sm" type="number" min="0" value={minFav} onChange={e=>setMinFav(Number(e.target.value))}/></div>
+        </div>
+        <button className="btn bghost bsm" onClick={save} disabled={saving}>{saving?"Saving…":"Save Defaults"}</button>
+      </div>
+      <div className="panel">
+        <div className="ptl">Date Range</div>
+        <div className="g3">
+          <div className="field"><label className="lbl">Start Month</label>
+            <select className="inp sm" value={sm} onChange={e=>setSm(Number(e.target.value))}>{MF.map((m,i)=><option key={m} value={i+1}>{m}</option>)}</select></div>
+          <div className="field"><label className="lbl">Start Day</label>
+            <select className="inp sm" value={sd} onChange={e=>setSd(Number(e.target.value))}>{Array.from({length:dim},(_,i)=>i+1).map(d=><option key={d} value={d}>{d}</option>)}</select></div>
+          <div className="field"><label className="lbl">Days in Range</label>
+            <input className="inp sm" type="number" min="1" max="30" value={rd} onChange={e=>setRd(Math.max(1,Number(e.target.value)))}/></div>
+        </div>
+        <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>
+          {Array.from({length:rd},(_,i)=>{const dt=new Date(CY,sm-1,sd+i);return`${MF[dt.getMonth()].slice(0,3)} ${dt.getDate()}`;}).join(" → ")}
+        </div>
+      </div>
+      <div className="panel">
+        <div className="ptl">History Depth</div>
+        <label className="lbl" style={{marginBottom:6,display:"block"}}>Years back — <span style={{color:"var(--text)"}}>{yb}</span> ({CY-yb}–{CY-1})</label>
+        <input type="range" min={1} max={18} value={yb} onChange={e=>setYb(Number(e.target.value))} style={{accentColor:"var(--teal)",width:"100%",cursor:"pointer"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text3)",marginTop:3}}><span>1 yr</span><span>18 yrs</span></div>
+      </div>
+      <div className="brow">
+        <button className="btn bteal" onClick={generate}>GENERATE LINKS</button>
+        <button className="btn bghost bsm" onClick={()=>{setSm(new Date().getMonth()+1);setSd(new Date().getDate());}}>Today</button>
+      </div>
+      {results.length>0&&(
+        <div style={{marginTop:24}} className="fi">
+          <div className="cbar">
+            <button className={`btn bghost bsm ${copied==="au"?"active":""}`} onClick={()=>copy(results.map(r=>r.url).join("\n"),"au")}>{copied==="au"?"✓ Copied":"Copy All URLs"}</button>
+            <button className={`btn bghost bsm ${copied==="af"?"active":""}`} onClick={()=>copy(results.map(r=>`${r.year} ${MF[r.month-1]} ${r.day}: ${r.url}`).join("\n"),"af")}>{copied==="af"?"✓ Copied":"Copy Year: URL"}</button>
+            <span style={{fontSize:10,color:"var(--text3)",alignSelf:"center"}}>{results.length} links</span>
+          </div>
+          {Object.entries(grouped).map(([lbl,rows])=>(
+            <div key={lbl} style={{marginBottom:20}}>
+              <div style={{fontSize:10,color:"var(--teal)",letterSpacing:".15em",textTransform:"uppercase",marginBottom:6,padding:"4px 0",borderBottom:"1px solid var(--border)"}}>{lbl}</div>
+              {rows.map((r,i)=>(
+                <div key={i} className="rc">
+                  <div className="ry">{r.year}</div>
+                  <div className="ru"><a href={r.url} target="_blank" rel="noopener noreferrer">{r.url.slice(0,72)}…</a>
+                    <div className="rag">{CY-r.year===1?"1 year ago":`${CY-r.year} years ago`}</div></div>
+                  <div className="ra">
+                    <button className={`ib ${copied===`r${r.year}${r.month}${r.day}`?"active":""}`} onClick={()=>copy(r.url,`r${r.year}${r.month}${r.day}`)}>⧉</button>
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"var(--text3)"}}>↗</a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// TRENDING
+function TrendingPage({userId}){
+  const[watches,setWatches]=useState([]);const[loading,setLoading]=useState(true);
+  const[nk,setNk]=useState("");const[nm,setNm]=useState(5);
+  useEffect(()=>{(async()=>{setLoading(true);const d=await dbFetch("twister_trending",userId,"tw_trending",[]);setWatches(d);setLoading(false);})();},[userId]);
+  const add=async()=>{
+    if(!nk.trim())return;
+    const row={user_id:userId,keyword:nk.trim(),min_engagement:nm,score:0,trend:"cold",last_seen:"never",count:0};
+    const{data}=await dbInsert("twister_trending",row,"tw_trending",watches);
+    if(data)setWatches(w=>[...w,data]);setNk("");
+  };
+  const remove=async id=>{await dbDelete("twister_trending",id,"tw_trending",watches);setWatches(w=>w.filter(x=>x.id!==id));};
+  if(loading)return<div className="loading"><div className="spin"/>Loading keyword watches…</div>;
+  return(
+    <div>
+      <div className="ptitle">Trending Tracker</div>
+      <div className="psub">Save keyword watches. See what's going viral before you post.</div>
+      <div className="note">💡 Scores are illustrative. Connect the X API in Settings for live data.</div>
+      <div className="panel">
+        <div className="ptl">Add Watch</div>
+        <div className="row">
+          <div className="field" style={{flex:2}}><label className="lbl">Keyword / Hashtag</label>
+            <input className="inp sm" value={nk} onChange={e=>setNk(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="#keyword or phrase"/></div>
+          <div className="field" style={{flex:1}}><label className="lbl">Min Engagement</label>
+            <input className="inp sm" type="number" min="0" value={nm} onChange={e=>setNm(Number(e.target.value))}/></div>
+          <div className="field" style={{alignSelf:"flex-end"}}><button className="btn bteal" onClick={add}>+ ADD</button></div>
+        </div>
+      </div>
+      {watches.map(w=>{
+        const pct=Math.min(100,w.score||0);
+        const bar=w.trend==="hot"?"var(--orange)":w.trend==="rising"?"var(--teal)":"var(--border2)";
+        return(
+          <div key={w.id} className="trc fi">
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+              <span className="tkw">{w.keyword}</span>
+              <span className={`badge ${w.trend==="hot"?"bhot":w.trend==="rising"?"bris":"bcol"}`}>{w.trend==="hot"?"🔥 HOT":w.trend==="rising"?"↑ RISING":"— QUIET"}</span>
+            </div>
+            <div className="tbar"><div className="tbf" style={{width:`${pct}%`,background:bar}}/></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span className="tmet">Score {w.score}/100 · {w.count} matches · last {w.last_seen} · min {w.min_engagement}</span>
+              <div style={{display:"flex",gap:6}}>
+                <a href={`https://x.com/search?q=${encodeURIComponent(w.keyword)}&f=live`} target="_blank" rel="noopener noreferrer" className="btn bghost bxs">SEARCH ↗</a>
+                <button className="btn bdanger bxs" onClick={()=>remove(w.id)}>✕</button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {!watches.length&&<div className="empty">No watches yet. Add keywords above.</div>}
+    </div>
+  );
+}
+
+// MEDIA
+const DLS=[
+  {name:"SSSTwitter",url:"https://ssstwitter.com",desc:"Paste any tweet URL. Downloads MP4 in HD. Works on mobile.",icon:"🎬",q:"HD · MP4"},
+  {name:"TweetPik",url:"https://tweetpik.com",desc:"Screenshots, images, and videos in high quality.",icon:"📸",q:"PNG · JPG · MP4"},
+  {name:"Twitter Video Downloader",url:"https://twittervideodownloader.com",desc:"Fast, supports up to 1080p.",icon:"⬇",q:"Up to 1080p"},
+  {name:"VidSnag",url:"https://vidsnag.com",desc:"Full-quality images, videos, and GIFs.",icon:"🎞",q:"Original Quality"},
+  {name:"DownloadTwitterVideo",url:"https://www.downloadtwittervideo.com",desc:"Simple, no-install. Works for most public media.",icon:"🔗",q:"MP4 · GIF"},
+  {name:"Twdown.net",url:"https://twdown.net",desc:"Multiple quality options in one session.",icon:"📥",q:"Multi-quality"},
+];
+function MediaPage(){
+  const[url,setUrl]=useState("");const[copied,copy]=useCopy();
+  return(
+    <div>
+      <div className="ptitle">Media Downloader</div>
+      <div className="psub">Download videos and images from X/Twitter in high quality.</div>
+      <div className="panel">
+        <div className="ptl">Tweet URL</div>
+        <div className="row">
+          <input className="inp" value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://x.com/username/status/123…"/>
+          {url&&<button className={`btn bghost bsm ${copied==="u"?"active":""}`} onClick={()=>copy(url,"u")}>{copied==="u"?"✓":"Copy"}</button>}
+        </div>
+        <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>Copy the tweet URL, then click any downloader and paste it there.</div>
+      </div>
+      <div className="g2" style={{gap:12}}>
+        {DLS.map(s=>(
+          <div key={s.name} className="dlc" onClick={()=>window.open(s.url,"_blank")}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:22}}>{s.icon}</span>
+              <div><div style={{fontSize:13,color:"var(--text)"}}>{s.name}</div>
+                <span className="chip cteal" style={{fontSize:9}}>{s.q}</span></div>
+            </div>
+            <div style={{fontSize:10,color:"var(--text3)",lineHeight:1.5}}>{s.desc}</div>
+            <a href={s.url} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:"var(--teal)"}} onClick={e=>e.stopPropagation()}>Open ↗</a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// COMMUNITY
+function CommunityPage({userId}){
+  const[profiles,setProfiles]=useState([]);const[loading,setLoading]=useState(true);const[nh,setNh]=useState("");
+  useEffect(()=>{(async()=>{setLoading(true);const d=await dbFetch("twister_community",userId,"tw_community",[]);setProfiles(d);setLoading(false);})();},[userId]);
+  const add=async()=>{
+    if(!nh.trim())return;
+    const h=nh.replace("@","").trim();
+    const row={user_id:userId,handle:h,name:h,followers:"?",following:"?",emoji:"👤",status:"active"};
+    const{data}=await dbInsert("twister_community",row,"tw_community",profiles);
+    if(data)setProfiles(p=>[...p,data]);setNh("");
+  };
+  const remove=async id=>{await dbDelete("twister_community",id,"tw_community",profiles);setProfiles(p=>p.filter(x=>x.id!==id));};
+  const toggleDead=async id=>{
+    const p=profiles.find(x=>x.id===id);const ns=p.status==="dead"?"active":"dead";
+    await dbUpdate("twister_community",id,{status:ns});
+    setProfiles(ps=>ps.map(x=>x.id===id?{...x,status:ns}:x));
+  };
+  if(loading)return<div className="loading"><div className="spin"/>Loading accounts…</div>;
+  return(
+    <div>
+      <div className="ptitle">Community</div>
+      <div className="psub">Track accounts, manage follow/unfollow, flag dead accounts.</div>
+      <div className="panel">
+        <div className="ptl">Add Account</div>
+        <div className="row">
+          <input className="inp" value={nh} onChange={e=>setNh(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="@handle"/>
+          <button className="btn bteal" onClick={add}>+ ADD</button>
+        </div>
+      </div>
+      {profiles.map(p=>(
+        <div key={p.id} className="prc fi">
+          <div className="pav">{p.emoji}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,color:"var(--text)"}}>{p.name}</div>
+            <div style={{fontSize:11,color:"var(--text3)"}}>@{p.handle}</div>
+            <div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>Followers: {p.followers} · Following: {p.following}</div>
+          </div>
+          {p.status==="dead"&&<span className="badge" style={{background:"#e3b34120",color:"var(--gold)",border:"1px solid #e3b34144",fontSize:9,padding:"2px 8px"}}>💀 DEAD?</span>}
+          <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+            <button className="btn bghost bxs" onClick={()=>toggleDead(p.id)}>{p.status==="dead"?"✓ Active":"Flag Dead"}</button>
+            <a href={`https://x.com/${p.handle}`} target="_blank" rel="noopener noreferrer" className="btn bghost bxs">VIEW ↗</a>
+            <button className="btn bdanger bxs" onClick={()=>remove(p.id)}>✕</button>
+          </div>
+        </div>
+      ))}
+      {!profiles.length&&<div className="empty">No accounts saved yet.</div>}
+    </div>
+  );
+}
+
+// HANDLES
+function HandlesPage(){
+  const[input,setInput]=useState("");const[results,setResults]=useState([]);
+  const check=()=>setResults(input.split(/[\n,\s]+/).map(h=>h.replace("@","").trim()).filter(Boolean).map(h=>({handle:h})));
+  return(
+    <div>
+      <div className="ptitle">Handle Checker</div>
+      <div className="psub">Check if handles are taken, dead, or available.</div>
+      <div className="note">X has no public availability API. A profile 404 means the handle may be free.</div>
+      <div className="panel">
+        <div className="ptl">Handles to Check</div>
+        <div className="field"><label className="lbl">One per line or comma/space separated</label>
+          <textarea className="inp" value={input} onChange={e=>setInput(e.target.value)} placeholder={"@handle1\n@handle2\nold_username"}/></div>
+        <button className="btn bteal" onClick={check}>CHECK HANDLES</button>
+      </div>
+      {results.length>0&&(
+        <div className="fi">
+          {results.map(r=>(
+            <div key={r.handle} className="hr">
+              <div className="hd" style={{background:"var(--teal)"}}/>
+              <div style={{flex:1,fontSize:13,color:"var(--text)"}}>@{r.handle}</div>
+              <a href={`https://x.com/${r.handle}`} target="_blank" rel="noopener noreferrer" className="btn bghost bxs">Open Profile ↗</a>
+            </div>
+          ))}
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:10}}>"Sorry, that page doesn't exist" = handle may be available or was suspended.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// CAPTION AI
+const DBRANDS=[
+  {name:"CincyProblems",voice:"Sarcastic, hyper-local Cincinnati humor. Short punchy tweets. Uses 'lmao', 'no cap', 'it be like that'. Relatable local frustrations. Never corporate.",sort_order:0},
+  {name:"Local News",voice:"Professional but conversational. Breaking news tone. Factual, clear, neutral. Short sentences. Minimal hashtags.",sort_order:1},
+  {name:"Brand 3",voice:"Describe this brand's voice — tone, style, emojis, audience, words to avoid.",sort_order:2},
+];
+function CaptionPage({userId}){
+  const[brands,setBrands]=useState([]);const[loading,setLoading]=useState(true);
+  const[sel,setSel]=useState(null);const[src,setSrc]=useState("");const[out,setOut]=useState("");const[gen,setGen]=useState(false);
+  const[editId,setEditId]=useState(null);const[editV,setEditV]=useState("");const[nn,setNn]=useState("");
+  const[copied,copy]=useCopy();
+  const apiKey=localStorage.getItem("tw_apikey")||"";
+
+  useEffect(()=>{(async()=>{
+    setLoading(true);
+    const sb=getSB();let data=[];
+    if(sb){const r=await sb.from("twister_brands").select("*").eq("user_id",userId).order("sort_order");data=r.data||[];}
+    else{try{data=JSON.parse(localStorage.getItem("tw_brands")||"[]");}catch{}}
+    if(!data.length){
+      const defs=DBRANDS.map((b,i)=>({...b,user_id:userId}));
+      if(sb){await sb.from("twister_brands").insert(defs);const r=await sb.from("twister_brands").select("*").eq("user_id",userId).order("sort_order");data=r.data||defs;}
+      else{data=defs.map((b,i)=>({...b,id:i+1}));localStorage.setItem("tw_brands",JSON.stringify(data));}
+    }
+    setBrands(data);setSel(data[0]?.id||null);setLoading(false);
+  })();},[userId]);
+
+  const saveBrand=async(id,voice)=>{
+    const sb=getSB();
+    if(sb)await sb.from("twister_brands").update({voice}).eq("id",id);
+    const nb=brands.map(x=>x.id===id?{...x,voice}:x);
+    setBrands(nb);localStorage.setItem("tw_brands",JSON.stringify(nb));setEditId(null);
+  };
+  const addBrand=async()=>{
+    if(!nn.trim())return;
+    const row={user_id:userId,name:nn.trim(),voice:"Describe this brand's voice and style.",sort_order:brands.length};
+    const{data}=await dbInsert("twister_brands",row,"tw_brands",brands);
+    if(data){setBrands(b=>[...b,data]);setSel(data.id);}setNn("");
+  };
+  const removeBrand=async id=>{
+    await dbDelete("twister_brands",id,"tw_brands",brands);
+    const nb=brands.filter(x=>x.id!==id);setBrands(nb);setSel(nb[0]?.id||null);
+  };
+
+  const generate=async()=>{
+    if(!src.trim())return;
+    const brand=brands.find(b=>b.id===sel);
+    if(!apiKey){setOut("⚠ Add your Anthropic API key in Settings.");return;}
+    setGen(true);setOut("");
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,
+          system:"You are a social media caption writer. Rewrite content in the exact brand voice described. Return ONLY the caption — no explanation, no quotes, no preamble.",
+          messages:[{role:"user",content:`Brand voice: ${brand?.voice}\n\nContent to rewrite:\n${src}\n\nWrite a tweet/caption in this brand's exact voice.`}]})
+      });
+      const d=await res.json();setOut(d.content?.[0]?.text||"No response.");
+    }catch(e){setOut("Error: "+e.message);}
+    setGen(false);
+  };
+
+  const brand=brands.find(b=>b.id===sel);
+  if(loading)return<div className="loading"><div className="spin"/>Loading brands…</div>;
+  return(
+    <div>
+      <div className="ptitle">Caption AI</div>
+      <div className="psub">Paste any content. Pick a brand. Get a caption in that brand's exact voice.</div>
+      {!apiKey&&<div className="note">🔑 Add your Anthropic API key in Settings to enable generation.</div>}
+      <div className="panel">
+        <div className="ptl">Brand Voice</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+          {brands.map(b=><button key={b.id} className={`bp ${sel===b.id?"active":""}`} onClick={()=>setSel(b.id)}>{b.name}</button>)}
+        </div>
+        <div className="row" style={{marginBottom:12}}>
+          <input className="inp sm" value={nn} onChange={e=>setNn(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addBrand()} placeholder="New brand name…" style={{flex:1}}/>
+          <button className="btn bghost bsm" onClick={addBrand}>+ Brand</button>
+        </div>
+        {brand&&(editId===brand.id?(
+          <div>
+            <textarea className="inp" value={editV} onChange={e=>setEditV(e.target.value)} style={{minHeight:70,marginBottom:8}}/>
+            <div className="brow">
+              <button className="btn bteal bsm" onClick={()=>saveBrand(brand.id,editV)}>Save Voice</button>
+              <button className="btn bghost bsm" onClick={()=>setEditId(null)}>Cancel</button>
+              <button className="btn bdanger bsm" onClick={()=>removeBrand(brand.id)}>Delete Brand</button>
+            </div>
+          </div>
+        ):(
+          <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.7,padding:"6px 0"}}>
+            {brand.voice}
+            <button className="btn bghost bxs" style={{marginLeft:10}} onClick={()=>{setEditId(brand.id);setEditV(brand.voice);}}>Edit</button>
+          </div>
+        ))}
+      </div>
+      <div className="panel">
+        <div className="ptl">Source Content</div>
+        <div className="field"><label className="lbl">Paste article, caption, or content to rewrite</label>
+          <textarea className="inp" value={src} onChange={e=>setSrc(e.target.value)} placeholder="Paste news article, someone else's caption, or any content…" style={{minHeight:120}}/></div>
+        <button className="btn bteal" onClick={generate} disabled={gen}>{gen?"Generating…":"GENERATE CAPTION"}</button>
+      </div>
+      {(out||gen)&&(
+        <div className="panel fi">
+          <div className="ptl">Output — {brand?.name}</div>
+          {gen?(<div style={{display:"flex",alignItems:"center",gap:8,color:"var(--text3)",fontSize:12}}>
+            <div className="spin"/>Generating<span className="da"><span>.</span><span>.</span><span>.</span></span>
+          </div>):(
+            <div>
+              <div className="ob">{out}</div>
+              <div className="brow" style={{marginTop:12}}>
+                <button className={`btn bghost bsm ${copied==="cap"?"active":""}`} onClick={()=>copy(out,"cap")}>{copied==="cap"?"✓ Copied":"Copy Caption"}</button>
+                <button className="btn bghost bsm" onClick={()=>setOut("")}>Clear</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// SETTINGS
+function SettingsPage({currentUser}){
+  const[sbUrl,setSbUrl]=useState(()=>localStorage.getItem("tw_sb_url")||"");
+  const[sbKey,setSbKey]=useState(()=>localStorage.getItem("tw_sb_key")||"");
+  const[ak,setAk]=useState(()=>localStorage.getItem("tw_apikey")||"");
+  const[showK,setShowK]=useState(false);const[showA,setShowA]=useState(false);
+  const[st,setSt]=useState(null);const[testing,setTesting]=useState(false);const[saved,setSaved]=useState(false);
+  const[nu,setNu]=useState("");const[np,setNp]=useState("");
+
+  const saveAll=()=>{
+    localStorage.setItem("tw_sb_url",sbUrl.trim());
+    localStorage.setItem("tw_sb_key",sbKey.trim());
+    localStorage.setItem("tw_apikey",ak.trim());
+    setSaved(true);setTimeout(()=>setSaved(false),2000);
+  };
+  const test=async()=>{
+    setTesting(true);setSt(null);
+    try{
+      const sb=window.supabase.createClient(sbUrl.trim(),sbKey.trim());
+      const{error}=await sb.from("twister_settings").select("id").limit(1);
+      setSt(error?{ok:false,msg:"Error: "+error.message}:{ok:true,msg:"Connected ✓"});
+    }catch(e){setSt({ok:false,msg:"Failed: "+e.message});}
+    setTesting(false);
+  };
+  const addUser=()=>{
+    if(!nu.trim()||!np.trim())return;
+    const users=JSON.parse(localStorage.getItem("tw_users")||"[]");
+    if(!users.find(u=>u.user===nu))localStorage.setItem("tw_users",JSON.stringify([...users,{user:nu,pass:np,role:"Editor"}]));
+    setNu("");setNp("");
+  };
+
+  return(
+    <div>
+      <div className="ptitle">Settings</div>
+      <div className="psub">Configure Supabase, API keys, and users.</div>
+      <div className="panel">
+        <div className="ptl">Supabase Connection</div>
+        <div style={{fontSize:11,color:"var(--text3)",marginBottom:14,lineHeight:1.7}}>
+          Get your URL + anon key from <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer">supabase.com</a> → Project → Settings → API
+        </div>
+        <div className="field"><label className="lbl">Project URL</label>
+          <input className="inp sm" value={sbUrl} onChange={e=>setSbUrl(e.target.value)} placeholder="https://xxxxxxxxxxxx.supabase.co"/></div>
+        <div className="field"><label className="lbl">Anon / Public Key</label>
+          <div className="row">
+            <input className="inp sm" type={showK?"text":"password"} value={sbKey} onChange={e=>setSbKey(e.target.value)} placeholder="eyJhbGciO…"/>
+            <button className="btn bghost bsm" onClick={()=>setShowK(v=>!v)}>{showK?"Hide":"Show"}</button>
+          </div>
+        </div>
+        <div className="brow">
+          <button className="btn bghost bsm" onClick={test} disabled={testing||!sbUrl||!sbKey}>{testing?"Testing…":"Test Connection"}</button>
+          {st&&<span style={{fontSize:11,color:st.ok?"var(--teal)":"var(--red)",alignSelf:"center"}}>{st.msg}</span>}
+        </div>
+      </div>
+      <div className="panel">
+        <div className="ptl">Anthropic API Key</div>
+        <div style={{fontSize:11,color:"var(--text3)",marginBottom:12}}>Required for Caption AI. Get it at <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a></div>
+        <div className="row">
+          <input className="inp sm" type={showA?"text":"password"} value={ak} onChange={e=>setAk(e.target.value)} placeholder="sk-ant-…"/>
+          <button className="btn bghost bsm" onClick={()=>setShowA(v=>!v)}>{showA?"Hide":"Show"}</button>
+        </div>
+      </div>
+      <button className="btn bteal" onClick={saveAll} style={{marginBottom:20}}>{saved?"✓ All Settings Saved":"Save All Settings"}</button>
+      <div className="panel">
+        <div className="ptl">Add User</div>
+        <div className="g2">
+          <div className="field"><label className="lbl">Username</label><input className="inp sm" value={nu} onChange={e=>setNu(e.target.value)} placeholder="newuser"/></div>
+          <div className="field"><label className="lbl">Password</label><input className="inp sm" type="password" value={np} onChange={e=>setNp(e.target.value)} placeholder="••••••••"/></div>
+        </div>
+        <button className="btn bghost bsm" onClick={addUser}>+ Add User</button>
+      </div>
+      <div className="panel">
+        <div className="sr"><div><div className="sl">Logged in as</div><div className="sh">{currentUser?.user} · {currentUser?.role}</div></div><span className="chip cteal">{currentUser?.role}</span></div>
+        <div className="sr"><div><div className="sl">Storage mode</div><div className="sh">{getSB()?"Supabase — cloud sync active":"Local browser only"}</div></div><span className={`chip ${getSB()?"cteal":"cred"}`}>{getSB()?"CLOUD":"LOCAL"}</span></div>
+      </div>
+      <div className="note">Run <code style={{color:"var(--teal)"}}>twister-supabase-schema.sql</code> in Supabase → SQL Editor first, then paste your credentials above and click Save.</div>
+    </div>
+  );
+}
+
+// APP SHELL
+const NAV=[
+  {id:"search",icon:"🔍",label:"Search",sec:"Tools"},
+  {id:"trending",icon:"📈",label:"Trending",sec:"Tools"},
+  {id:"media",icon:"🎬",label:"Media",sec:"Tools"},
+  {id:"community",icon:"👥",label:"Community",sec:"Manage"},
+  {id:"handles",icon:"@",label:"Handles",sec:"Manage"},
+  {id:"caption",icon:"✍",label:"Caption AI",sec:"Create"},
+  {id:"settings",icon:"⚙",label:"Settings",sec:"System"},
+];
+const PAGES={search:SearchPage,trending:TrendingPage,media:MediaPage,community:CommunityPage,handles:HandlesPage,caption:CaptionPage,settings:SettingsPage};
+
+function App(){
+  const[user,setUser]=useState(()=>JSON.parse(sessionStorage.getItem("tw_session")||"null"));
+  const[page,setPage]=useState("search");
+  const login=u=>{sessionStorage.setItem("tw_session",JSON.stringify(u));setUser(u);};
+  const logout=()=>{sessionStorage.removeItem("tw_session");setUser(null);};
+  if(!user)return<Login onLogin={login}/>;
+  const secs=[...new Set(NAV.map(n=>n.sec))];
+  const PC=PAGES[page]||SearchPage;
+  const conn=!!getSB();
+  return(
+    <div className="app">
+      <div className="sidebar">
+        <div className="slogo">
+          <div className="sltext">TWISTER</div>
+          <div className="slver">v 1.3</div>
+          <div className="sbst"><div className={`sdot ${conn?"on":"off"}`}/><span>{conn?"Supabase connected":"Local only"}</span></div>
+        </div>
+        <nav className="snav">
+          {secs.map(sec=>(
+            <div key={sec}>
+              <div className="nsec">{sec}</div>
+              {NAV.filter(n=>n.sec===sec).map(n=>(
+                <div key={n.id} className={`ni ${page===n.id?"active":""}`} onClick={()=>setPage(n.id)}>
+                  <span className="ic">{n.icon}</span><span>{n.label}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </nav>
+        <div className="suser">
+          <div className="sun">{user.user}</div>
+          <div className="sur">{user.role||"User"}</div>
+          <div className="slo" onClick={logout}>Sign out</div>
+        </div>
+      </div>
+      <div className="main fi"><PC userId={user.user} currentUser={user}/></div>
+    </div>
+  );
+}
+ReactDOM.render(<App/>,document.getElementById("root"));
+</script>
+</body>
+</html>
